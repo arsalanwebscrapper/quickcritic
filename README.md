@@ -1,22 +1,21 @@
-# Welcome to your Lovable project
+# Welcome to
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/f05d5528-ba11-4861-9f41-c776340843f0
+**URL**: 
 
 ## How can I edit this code?
 
 There are several ways of editing your application.
 
-**Use Lovable**
+**Use dev**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f05d5528-ba11-4861-9f41-c776340843f0) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
+Simply visit the 
+Changes made via dev will be committed automatically to this repo.
 
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in dev.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -62,12 +61,12 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/f05d5528-ba11-4861-9f41-c776340843f0) and click on Share -> Publish.
+Simply open [dev](https://dev.dev/projects/f05d5528-ba11-4861-9f41-c776340843f0) and click on Share -> Publish.
 
-## Can I connect a custom domain to my Lovable project?
+## Can I connect a custom domain to my dev project?
 
 Yes, you can!
 
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Read more here: [Setting up a custom domain](https://docs.dev.dev/features/custom-domain#custom-domain)
