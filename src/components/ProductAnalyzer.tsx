@@ -6,6 +6,7 @@ import { Loader2, Search, TrendingUp, TrendingDown, AlertCircle } from "lucide-r
 import { toast } from "sonner";
 import { ScoreCircle } from "./ScoreCircle";
 import { ProductCard } from "./ProductCard";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisResult {
   url: string;
@@ -49,29 +50,23 @@ export const ProductAnalyzer = () => {
     setResult(null);
 
     try {
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-product`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
+      const { data: respData, error } = await supabase.functions.invoke('analyze-product', {
+        body: { url },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 429) {
+      if (error) {
+        const status = (error as any).status ?? 500;
+        if (status === 429) {
           toast.error("Rate limit exceeded. Please try again later.");
-        } else if (response.status === 402) {
+        } else if (status === 402) {
           toast.error("AI credits exhausted. Please contact support.");
         } else {
-          toast.error(errorData.error || "Failed to analyze product");
+          toast.error((error as any).message || "Failed to analyze product");
         }
         return;
       }
 
-      const data = await response.json();
-      setResult(data);
+      setResult(respData as AnalysisResult);
       toast.success("Analysis complete!");
     } catch (error) {
       toast.error("Failed to analyze product. Please try again.");
