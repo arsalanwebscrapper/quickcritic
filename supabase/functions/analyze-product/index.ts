@@ -99,14 +99,35 @@ Deno.serve(async (req) => {
     console.log('Fetching product page...');
     const pageResponse = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0',
       },
     });
 
     if (!pageResponse.ok) {
-      console.error('Failed to fetch page:', pageResponse.status);
+      console.error('Failed to fetch page:', pageResponse.status, pageResponse.statusText);
+      
+      let errorMessage = 'Unable to access this product page. ';
+      if (pageResponse.status === 429 || pageResponse.status === 529) {
+        errorMessage += 'The website is blocking automated requests. Try a different product or wait a few minutes.';
+      } else if (pageResponse.status === 403) {
+        errorMessage += 'Access to this page is restricted.';
+      } else if (pageResponse.status === 404) {
+        errorMessage += 'Product page not found. Please check the URL.';
+      } else {
+        errorMessage += 'Please try again or use a different product URL.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch product page' }),
+        JSON.stringify({ error: errorMessage }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
