@@ -55,14 +55,13 @@ export const ProductAnalyzer = () => {
       });
 
       if (error) {
-        const status = (error as any).status ?? 500;
-        if (status === 429) {
-          toast.error("Rate limit exceeded. Please try again later.");
-        } else if (status === 402) {
-          toast.error("AI credits exhausted. Please contact support.");
-        } else {
-          toast.error((error as any).message || "Failed to analyze product");
-        }
+        console.error('Analysis error:', error);
+        toast.error((error as any).message || "Failed to analyze product. The website may be blocking automated requests.");
+        return;
+      }
+
+      if (!respData) {
+        toast.error("No data received from analysis");
         return;
       }
 
