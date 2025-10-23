@@ -1,22 +1,23 @@
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Loader2, Search, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { ScoreCircle } from "./ScoreCircle";
-import { ProductCard } from "./ProductCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { ScoreCircle } from "./ScoreCircle";
+import { MiniScoreCard } from "./MiniScoreCard";
+import { StoreLink } from "./StoreLink";
 
 interface AnalysisResult {
   url: string;
   meta: {
-    title: string;
-    image?: string;
-    description?: string;
-    price?: number;
-    currency?: string;
-    rating?: number;
+    title: string | null;
+    image: string | null;
+    description: string | null;
+    price: number | null;
+    currency: string | null;
+    rating: number | null;
   };
   ai: {
     score: number;
@@ -24,6 +25,11 @@ interface AnalysisResult {
     pros: string[];
     cons: string[];
     sentiment_score: number;
+    category?: string;
+    category_scores?: { label: string; score: number }[];
+    stores?: { name: string; url: string; price?: string }[];
+    reviews_summary?: string;
+    sources_count?: number;
   };
 }
 
@@ -31,18 +37,15 @@ export const ProductAnalyzer = () => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const { toast } = useToast();
 
   const handleAnalyze = async () => {
     if (!url.trim()) {
-      toast.error("Please enter a product URL");
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(url);
-    } catch {
-      toast.error("Please enter a valid URL");
+      toast({
+        title: "Error",
+        description: "Please enter a product URL",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -50,142 +53,196 @@ export const ProductAnalyzer = () => {
     setResult(null);
 
     try {
-      const { data: respData, error } = await supabase.functions.invoke('analyze-product', {
-        body: { url },
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        "analyze-product",
+        {
+          body: { url: url.trim() },
+        }
+      );
+
+      if (functionError) {
+        console.error("Function error:", functionError);
+        toast({
+          title: "Error",
+          description: functionError.message || "Failed to analyze product",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!functionData || !functionData.ai) {
+        toast({
+          title: "Error",
+          description: "No analysis data received. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setResult(functionData);
+      toast({
+        title: "Success",
+        description: "Product analyzed successfully!",
       });
-
-      if (error) {
-        console.error('Analysis error:', error);
-        toast.error((error as any).message || "Failed to analyze product. The website may be blocking automated requests.");
-        return;
-      }
-
-      if (!respData) {
-        toast.error("No data received from analysis");
-        return;
-      }
-
-      setResult(respData as AnalysisResult);
-      toast.success("Analysis complete!");
     } catch (error) {
-      toast.error("Failed to analyze product. Please try again.");
-      console.error(error);
+      console.error("Error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-4xl space-y-8">
-        {/* Header */}
+    <div className="min-h-screen w-full bg-background py-8 px-4">
+      <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-4 animate-fade-in">
-          <div className="inline-block">
-            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Product AI Score
-            </h1>
-            <div className="h-1 bg-gradient-primary rounded-full mt-2"></div>
-          </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Get instant AI-powered insights on any product. Just paste the URL and let our AI analyze it.
+          <h1 className="text-4xl md:text-5xl font-bold text-primary">
+            QuickCritic
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            AI-Powered Product Analysis
           </p>
         </div>
 
-        {/* Search Bar */}
-        <Card className="p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card animate-slide-up">
-          <div className="flex flex-col md:flex-row gap-4">
+        <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card animate-slide-up">
+          <div className="flex flex-col md:flex-row gap-3">
             <Input
-              type="url"
-              placeholder="Paste product URL (Amazon, Flipkart, etc.)"
+              placeholder="Enter product URL..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-              className="flex-1 bg-background/50 border-border/50 focus:border-primary text-lg h-14"
-              disabled={loading}
+              onKeyPress={(e) => e.key === "Enter" && handleAnalyze()}
+              className="flex-1 bg-background/50"
             />
             <Button
               onClick={handleAnalyze}
               disabled={loading}
-              size="lg"
-              className="bg-gradient-primary hover:opacity-90 transition-opacity shadow-glow h-14 px-8"
+              className="bg-primary hover:bg-primary/90 w-full md:w-auto"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Analyzing
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-5 w-5" />
-                  Analyze
-                </>
-              )}
+              <Search className="h-4 w-4 mr-2" />
+              {loading ? "Analyzing..." : "Analyze"}
             </Button>
           </div>
         </Card>
 
-        {/* Results */}
         {result && (
-          <div className="space-y-6 animate-scale-in">
-            {/* Score Section */}
-            <Card className="p-8 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-shrink-0">
-                  <ScoreCircle score={result.ai.score} />
+          <div className="space-y-6 animate-fade-in">
+            {/* Product Image */}
+            {result.meta.image && (
+              <div className="w-full max-w-md mx-auto">
+                <img
+                  src={result.meta.image}
+                  alt={result.meta.title || "Product"}
+                  className="w-full h-auto rounded-lg border border-border/50 shadow-card"
+                />
+              </div>
+            )}
+
+            {/* Product Name */}
+            <div className="text-center">
+              <h2 className="text-2xl md:text-3xl font-bold text-primary">
+                {result.meta.title || "Product"}
+              </h2>
+              {result.meta.description && (
+                <p className="text-muted-foreground text-sm md:text-base mt-2">
+                  {result.meta.description}
+                </p>
+              )}
+            </div>
+
+            {/* Available Stores */}
+            {result.ai.stores && result.ai.stores.length > 0 && (
+              <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
+                <h3 className="text-lg font-semibold mb-4 text-primary">Available On:</h3>
+                <div className="space-y-2">
+                  {result.ai.stores.map((store, idx) => (
+                    <StoreLink
+                      key={idx}
+                      name={store.name}
+                      url={store.url}
+                      price={store.price}
+                    />
+                  ))}
                 </div>
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">AI Analysis</h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {result.ai.short_review}
+              </Card>
+            )}
+
+            {/* AI Score */}
+            <div className="flex justify-center">
+              <ScoreCircle score={result.ai.score} />
+            </div>
+
+            {/* Category-specific Scores */}
+            {result.ai.category_scores && result.ai.category_scores.length > 0 && (
+              <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
+                <h3 className="text-lg font-semibold mb-4 text-primary text-center">
+                  Score Breakdown
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {result.ai.category_scores.map((item, idx) => (
+                    <MiniScoreCard key={idx} label={item.label} score={item.score} />
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* AI Summary */}
+            <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
+              <h3 className="text-lg font-semibold mb-4 text-primary">AI Summary</h3>
+              <p className="text-foreground text-sm md:text-base leading-relaxed mb-4">
+                {result.ai.short_review}
+              </p>
+
+              {result.ai.reviews_summary && (
+                <>
+                  <div className="border-t border-border/50 my-4" />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {result.ai.sources_count && (
+                        <span>Sources Analysed ({result.ai.sources_count})</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground italic">
+                      {result.ai.reviews_summary}
                     </p>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-success">
-                        <TrendingUp className="h-5 w-5" />
-                        <h4 className="font-semibold">Pros</h4>
-                      </div>
-                      <ul className="space-y-1">
-                        {result.ai.pros.map((pro, idx) => (
-                          <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-success mt-1">•</span>
-                            {pro}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-destructive">
-                        <TrendingDown className="h-5 w-5" />
-                        <h4 className="font-semibold">Cons</h4>
-                      </div>
-                      <ul className="space-y-1">
-                        {result.ai.cons.map((con, idx) => (
-                          <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-destructive mt-1">•</span>
-                            {con}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </Card>
 
-            {/* Product Card */}
-            <ProductCard product={result.meta} />
+            {/* Pros and Cons */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
+                <h3 className="text-lg font-semibold mb-4 text-success">
+                  Key Strengths ({result.ai.pros.length})
+                </h3>
+                <ul className="space-y-2">
+                  {result.ai.pros.map((pro, idx) => (
+                    <li key={idx} className="text-sm text-foreground flex items-start gap-2">
+                      <span className="text-success mt-1">✓</span>
+                      <span>{pro}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
 
-            {/* Info Banner */}
-            <Card className="p-4 bg-secondary/50 border-accent/30">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">
-                  This analysis is AI-generated and cached for 24 hours. Scores are based on multiple factors including ratings, reviews, price fairness, and product quality indicators.
-                </p>
-              </div>
-            </Card>
+              <Card className="p-4 md:p-6 bg-gradient-card backdrop-blur-sm border-border/50 shadow-card">
+                <h3 className="text-lg font-semibold mb-4 text-destructive">
+                  Key Limitations ({result.ai.cons.length})
+                </h3>
+                <ul className="space-y-2">
+                  {result.ai.cons.map((con, idx) => (
+                    <li key={idx} className="text-sm text-foreground flex items-start gap-2">
+                      <span className="text-destructive mt-1">✗</span>
+                      <span>{con}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </div>
           </div>
         )}
       </div>
